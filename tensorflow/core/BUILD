@@ -984,6 +984,7 @@ filegroup(
         "training_ops_op_lib",
         "uniform_quant_ops_op_lib",
         "word2vec_ops",
+        "kdnn_nn_ops_op_lib",
     ]
 ]
 

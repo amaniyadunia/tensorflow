@@ -41,6 +41,11 @@ load(
     "if_mkl",
     "if_mkl_ml",
 )
+load(
+    "//third_party/KDNN:build_defs.bzl",
+    "if_enable_kdnn",
+    "kdnn_deps",
+)
 
 default_package_visibility = [
     "//tensorflow:internal",
@@ -1374,6 +1379,29 @@ cc_library(
     alwayslink = 1,
 )
 
+# KDNN layout pass library
+# Note: KDNN is mutually exclusive with oneDNN/MKL. 
+# Enable via: bazel build --define=enable_kdnn=true
+cc_library(
+    name = "kdnn_layout_pass",
+    srcs = if_enable_kdnn(["kdnn_layout_pass.cc"]),
+    hdrs = if_enable_kdnn(["kdnn_layout_pass.h"]),
+    copts = tf_copts(),
+    defines = if_enable_kdnn(["KDNN_ENABLED"]),
+    deps = [
+        ":function",
+        ":optimization_registry",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:framework_internal",
+        "//tensorflow/core:graph",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:lib_internal",
+        "//tensorflow/core:protos_all_cc",
+        "@com_google_absl//absl/base",
+    ] + kdnn_deps(),
+    alwayslink = 1,
+)
+
 cc_library(
     name = "node_file_writer",
     srcs = ["node_file_writer.cc"],
@@ -1975,7 +2003,10 @@ tf_cuda_library(
         ":step_stats_collector",
         ":threadpool_device",
         ":threadpool_device_factory",
-    ] + if_zendnn([":zen_layout_pass"]) + if_macos(
+    ] + if_zendnn([":zen_layout_pass"]) + if_enable_kdnn([
+        ":kdnn_layout_pass",
+        "//tensorflow/core/kernels:kdnn_kernels",
+    ]) + if_macos(
         [],
         [":replicate_constants_pass"],  # TODO(b/301469885): Remove.
     ),
